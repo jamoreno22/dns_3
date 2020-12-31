@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package= "github.com/jamoreno22/dns_3";
+option go_package= "github.com/jamoreno22/admin";
 
 package lab3;
 
@@ -35,12 +35,14 @@ message Command{
     string domain = 3;
     string option = 4;
     string parameter = 5;
+    string ip = 6;
 }
 
 message VectorClock{
-    int32 rv1 = 1;
-    int32 rv2 = 2;
-    int32 rv3 = 3;
+    string name = 1;
+    int32 rv1 = 2;
+    int32 rv2 = 3;
+    int32 rv3 = 4;
 }
 
 message PageInfo{
