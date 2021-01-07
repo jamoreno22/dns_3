@@ -38,7 +38,7 @@ func server() {
 	grpcDNSServer := grpc.NewServer()            // attach the Ping service to the server
 	lab3.RegisterDNSServer(grpcDNSServer, &dnss) // start the server
 
-	log.Println("DNSServer_1 running ...")
+	log.Println("DNSServer_3 running ...")
 	if err := grpcDNSServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %s", err)
 	}
@@ -96,7 +96,7 @@ func isError(err error) bool {
 // Action server side
 func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.VectorClock, error) {
 
-	var registerLog, err3 = os.OpenFile("log", os.O_RDWR, 0644)
+	var registerLog, err3 = os.OpenFile("log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if isError(err3) {
 		fmt.Printf("File opening error")
 
@@ -118,19 +118,19 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 			defer file.Close()
 		}
 
-		var file, err2 = os.OpenFile("ZF/"+cmd.Domain, os.O_RDWR, 0644)
+		var file, err2 = os.OpenFile("ZF/"+cmd.Domain, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if isError(err2) {
 			fmt.Printf("File opening error")
 
 		}
 		defer file.Close()
 
-		_, err = file.WriteString(cmd.Name + cmd.Domain + " IN A " + cmd.Ip)
+		_, err = file.WriteString(cmd.Name + cmd.Domain + " IN A " + cmd.Ip + "\n")
 		if isError(err) {
 			fmt.Printf("File writing error")
 
 		}
-		_, err = registerLog.WriteString("Create " + cmd.Option + " " + cmd.Parameter)
+		_, err = registerLog.WriteString("Create " + cmd.Name + "." + cmd.Domain + "\n")
 		if isError(err) {
 			fmt.Printf("log writing error")
 		}
@@ -146,7 +146,9 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 		for i, line := range lines {
 			if strings.Contains(line, cmd.Name) {
 				if cmd.Option == "Name" {
-					lines[i] = cmd.Parameter + cmd.Domain + " IN A " + cmd.Ip
+					local := strings.Split(line, " ")
+					localIP := local[len(local)-1]
+					lines[i] = cmd.Parameter + cmd.Domain + " IN A " + localIP
 				} else {
 					lines[i] = cmd.Name + cmd.Domain + " IN A " + cmd.Parameter
 				}
