@@ -111,7 +111,6 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 		// create file if not exists
 		if os.IsNotExist(err) {
 			var file, err1 = os.Create("ZF/" + cmd.Domain)
-			vectors = append(vectors, &lab3.VectorClock{Name: cmd.Domain, Rv1: 0, Rv2: 0, Rv3: 0})
 			if isError(err1) {
 				fmt.Printf("File creation error")
 			}
@@ -125,7 +124,7 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 		}
 		defer file.Close()
 
-		_, err = file.WriteString(cmd.Name + cmd.Domain + " IN A " + cmd.Ip + "\n")
+		_, err = file.WriteString(cmd.Name + "." + cmd.Domain + " IN A " + cmd.Ip + "\n")
 		if isError(err) {
 			fmt.Printf("File writing error")
 
@@ -134,6 +133,7 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 		if isError(err) {
 			fmt.Printf("log writing error")
 		}
+		vectors = append(vectors, &lab3.VectorClock{Name: cmd.Domain, Rv1: 0, Rv2: 0, Rv3: 0})
 
 	case 2: //Update
 		input, err := ioutil.ReadFile("ZF/" + cmd.Domain)
@@ -148,9 +148,9 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 				if cmd.Option == "Name" {
 					local := strings.Split(line, " ")
 					localIP := local[len(local)-1]
-					lines[i] = cmd.Parameter + cmd.Domain + " IN A " + localIP
+					lines[i] = cmd.Parameter + "." + cmd.Domain + " IN A " + localIP
 				} else {
-					lines[i] = cmd.Name + cmd.Domain + " IN A " + cmd.Parameter
+					lines[i] = cmd.Name + "." + cmd.Domain + " IN A " + cmd.Parameter
 				}
 			}
 		}
@@ -193,7 +193,7 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 			fmt.Printf("log writing error")
 		}
 	}
-
+	log.Println(vectors)
 	for _, s := range vectors {
 		if s.Name == cmd.Domain {
 			s.Rv3++
@@ -205,15 +205,31 @@ func (s *DNSServer) Action(ctx context.Context, cmd *lab3.Command) (*lab3.Vector
 
 //Spread server side
 func (s *DNSServer) Spread(ctx context.Context, lg *lab3.Log) (*lab3.Message, error) {
-
+	log.Println("aquí sincronizaría mis nodos si tuviera consistencia")
 	return &lab3.Message{Text: "asdf"}, nil
 }
 
 //GetIP server side
 func (s *DNSServer) GetIP(ctx context.Context, cmd *lab3.Command) (*lab3.PageInfo, error) {
+	log.Println(vectors)
 	for _, s := range vectors {
 		if s.Name == cmd.Domain {
-			return &lab3.PageInfo{PageIp: cmd.Ip, Rv: s, DnsIP: "10.10.28.19:8000"}, nil
+			input, err := ioutil.ReadFile("ZF/" + cmd.Domain)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			lines := strings.Split(string(input), "\n")
+
+			var localIP string
+			for _, line := range lines {
+				if strings.Contains(line, cmd.Name) {
+					local := strings.Split(line, " ")
+					localIP = local[len(local)-1]
+
+				}
+			}
+			return &lab3.PageInfo{PageIp: localIP, Rv: s, DnsIP: "10.10.28.19:8000"}, nil
 		}
 	}
 	return &lab3.PageInfo{}, nil
